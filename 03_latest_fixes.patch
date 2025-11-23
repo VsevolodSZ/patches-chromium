@@ -1,0 +1,210 @@
+diff --git a/chrome/test/chromedriver/chrome/devtools_client_impl.cc b/chrome/test/chromedriver/chrome/devtools_client_impl.cc
+index 1168bd5e5da95..96ae4554a7759 100644
+--- a/chrome/test/chromedriver/chrome/devtools_client_impl.cc
++++ b/chrome/test/chromedriver/chrome/devtools_client_impl.cc
+@@ -572,38 +572,31 @@ Status DevToolsClientImpl::SetupTabTarget() {
+ Status DevToolsClientImpl::SetUpDevTools() {
+   if (id_ != kBrowserwideDevToolsClientId &&
+       (GetOwner() == nullptr || !GetOwner()->IsServiceWorker())) {
+-    // The method Page.addScriptToEvaluateOnNewDocument used below has no effect
+-    // until Page domain is enabled.
+-    // In majority of cases the event listeners like NavigationTracker enable
+-    // this domain quickly enough to mask the problem.
+-    // In rare occasions (2% of cases) they kick in too late and therefore the
+-    // tests like testExecuteScriptWithDeletedGlobalJSON can fail.
+-    // To avoid such flakiness we enable the Page domain first.
+     SendCommandAndIgnoreResponse("Page.enable", base::Value::Dict());
+ 
+-    // This is a page or frame level DevToolsClient
+-    base::Value::Dict params;
+-    std::string script =
+-        "(function () {"
+-        "window.cdc_adoQpoasnfa76pfcZLmcfl_Array = window.Array;"
+-        "window.cdc_adoQpoasnfa76pfcZLmcfl_Object = window.Object;"
+-        "window.cdc_adoQpoasnfa76pfcZLmcfl_Promise = window.Promise;"
+-        "window.cdc_adoQpoasnfa76pfcZLmcfl_Proxy = window.Proxy;"
+-        "window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol = window.Symbol;"
+-        "window.cdc_adoQpoasnfa76pfcZLmcfl_JSON = window.JSON;"
+-        "window.cdc_adoQpoasnfa76pfcZLmcfl_Window = window.Window;"
+-        "}) ();";
+-    params.Set("source", script);
+-    Status status = SendCommandAndIgnoreResponse(
+-        "Page.addScriptToEvaluateOnNewDocument", params);
+-    if (status.IsError())
+-      return status;
+-
+-    params.clear();
+-    params.Set("expression", script);
+-    status = SendCommandAndIgnoreResponse("Runtime.evaluate", params);
+-    if (status.IsError())
+-      return status;
++    // Inject window.chrome object for stealth mode
++    base::Value::Dict chrome_params;
++    std::string chrome_script =
++        "(function() {"
++        "  if (!window.chrome) {"
++        "    window.chrome = {};"
++        "  }"
++        "  if (!window.chrome.runtime) {"
++        "    window.chrome.runtime = {};"
++        "  }"
++        "  if (!window.chrome.loadTimes) {"
++        "    window.chrome.loadTimes = function() {};"
++        "  }"
++        "  if (!window.chrome.csi) {"
++        "    window.chrome.csi = function() {};"
++        "  }"
++        "  if (!window.chrome.app) {"
++        "    window.chrome.app = {};"
++        "  }"
++        "})();";
++    chrome_params.Set("source", chrome_script);
++    SendCommandAndIgnoreResponse(
++        "Page.addScriptToEvaluateOnNewDocument", chrome_params);
+   }
+ 
+   return Status{kOk};
+diff --git a/components/embedder_support/user_agent_utils.cc b/components/embedder_support/user_agent_utils.cc
+index eb4a065f0a695..c1f0f71aeca67 100644
+--- a/components/embedder_support/user_agent_utils.cc
++++ b/components/embedder_support/user_agent_utils.cc
+@@ -245,9 +245,10 @@ const blink::UserAgentBrandList GetUserAgentBrandFullVersionListInternal(
+ std::string GetUserAgentInternal(
+     UserAgentReductionEnterprisePolicyState user_agent_reduction) {
+   std::string product = GetProductAndVersion(user_agent_reduction);
+-  if (base::CommandLine::ForCurrentProcess()->HasSwitch(kHeadless)) {
+-    product.insert(0, "Headless");
+-  }
++  // Headless detection removed for stealth mode
++  // if (base::CommandLine::ForCurrentProcess()->HasSwitch(kHeadless)) {
++  //   product.insert(0, "Headless");
++  // }
+ 
+ #if BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_IOS)
+   if (base::CommandLine::ForCurrentProcess()->HasSwitch(kUseMobileUserAgent)) {
+diff --git a/third_party/blink/renderer/core/frame/navigator_concurrent_hardware.cc b/third_party/blink/renderer/core/frame/navigator_concurrent_hardware.cc
+index f5c0db2d1b58d..fe355a93e778f 100644
+--- a/third_party/blink/renderer/core/frame/navigator_concurrent_hardware.cc
++++ b/third_party/blink/renderer/core/frame/navigator_concurrent_hardware.cc
+@@ -5,11 +5,30 @@
+ #include "third_party/blink/renderer/core/frame/navigator_concurrent_hardware.h"
+ 
+ #include "base/system/sys_info.h"
++#include "base/rand_util.h"
++
++#include <random>
++#include <chrono>
+ 
+ namespace blink {
+ 
+ unsigned NavigatorConcurrentHardware::hardwareConcurrency() const {
+-  return static_cast<unsigned>(base::SysInfo::NumberOfProcessors());
++  static const unsigned kCpuConfigs[] = {
++    4, 6, 8, 8, 12, 16, 16, 24, 32, 64
++  };
++  
++  static unsigned selected_cores = 0;
++  if (selected_cores == 0) {
++    // Random seed from current time
++    auto now = std::chrono::high_resolution_clock::now();
++    auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(
++        now.time_since_epoch()).count();
++    std::mt19937 gen(static_cast<unsigned>(nanos));
++    std::uniform_int_distribution<> dis(0, 9);
++    selected_cores = kCpuConfigs[dis(gen)];
++  }
++  
++  return selected_cores;
+ }
+ 
+ }  // namespace blink
+diff --git a/third_party/blink/renderer/core/frame/navigator_device_memory.cc b/third_party/blink/renderer/core/frame/navigator_device_memory.cc
+index 2876aad29853b..bc2d927513ca9 100644
+--- a/third_party/blink/renderer/core/frame/navigator_device_memory.cc
++++ b/third_party/blink/renderer/core/frame/navigator_device_memory.cc
+@@ -10,11 +10,30 @@
+ #include "third_party/blink/public/mojom/use_counter/metrics/web_feature.mojom-shared.h"
+ #include "third_party/blink/renderer/core/dom/document.h"
+ #include "third_party/blink/renderer/core/frame/local_dom_window.h"
++#include "base/rand_util.h"
++
++#include <random>
++#include <chrono>
+ 
+ namespace blink {
+ 
+ float NavigatorDeviceMemory::deviceMemory() const {
+-  return ApproximatedDeviceMemory::GetApproximatedDeviceMemory();
++  static const float kRamConfigs[] = {
++    4.0f, 8.0f, 8.0f, 16.0f, 16.0f, 32.0f, 32.0f, 64.0f, 128.0f, 256.0f
++  };
++  
++  static float selected_ram = 0.0f;
++  if (selected_ram == 0.0f) {
++    // Random seed from current time
++    auto now = std::chrono::high_resolution_clock::now();
++    auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(
++        now.time_since_epoch()).count();
++    std::mt19937 gen(static_cast<unsigned>(nanos));
++    std::uniform_int_distribution<> dis(0, 9);
++    selected_ram = kRamConfigs[dis(gen)];
++  }
++  
++  return selected_ram;
+ }
+ 
+ }  // namespace blink
+diff --git a/third_party/blink/renderer/core/frame/navigator_id.cc b/third_party/blink/renderer/core/frame/navigator_id.cc
+index 50a1727f8dbd5..bdc87f6cfb4cc 100644
+--- a/third_party/blink/renderer/core/frame/navigator_id.cc
++++ b/third_party/blink/renderer/core/frame/navigator_id.cc
+@@ -31,6 +31,9 @@
+ 
+ #include "third_party/blink/renderer/core/frame/navigator_id.h"
+ 
++#include <random>
++#include <chrono>
++
+ #include "base/feature_list.h"
+ #include "build/build_config.h"
+ #include "third_party/blink/public/common/features.h"
+@@ -40,6 +43,11 @@
+ #include <sys/utsname.h>
+ #include "third_party/blink/renderer/platform/wtf/thread_specific.h"
+ #include "third_party/blink/renderer/platform/wtf/threading.h"
++
++#include "base/process/process.h"
++#include "base/rand_util.h"
++
++
+ #endif
+ 
+ namespace blink {
+@@ -63,8 +71,25 @@ String NavigatorID::platform() const {
+   // Match Safari and Mozilla on Mac x86.
+   return "MacIntel";
+ #elif BUILDFLAG(IS_WIN)
+-  // Match Safari and Mozilla on Windows.
+-  return "Win32";
++  // Randomize between Win32 and Win64 for fingerprinting resistance
++  static const char* kPlatformConfigs[] = {
++    "Win32", "Win32", "Win32",
++    "Win64", "Win64", "Win64", "Win64"
++  };
++  
++  static const char* selected_platform = nullptr;
++  if (selected_platform == nullptr) {
++    // Random seed from current time in nanoseconds
++    auto now = std::chrono::high_resolution_clock::now();
++    auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(
++        now.time_since_epoch()).count();
++    std::mt19937 gen(static_cast<unsigned>(nanos));
++    std::uniform_int_distribution<> dis(0, 6);
++    selected_platform = kPlatformConfigs[dis(gen)];
++  }
++  
++  return selected_platform;
++
+ #else  // Unix-like systems
+   struct utsname osname;
+   DEFINE_THREAD_SAFE_STATIC_LOCAL(ThreadSpecific<String>, platform_name, ());
