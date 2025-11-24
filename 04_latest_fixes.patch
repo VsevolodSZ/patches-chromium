@@ -1,0 +1,573 @@
+diff --git a/base/i18n/icu_util.cc b/base/i18n/icu_util.cc
+index 6e6e12089d718..88fee6b72a807 100644
+--- a/base/i18n/icu_util.cc
++++ b/base/i18n/icu_util.cc
+@@ -315,25 +315,22 @@ bool InitializeICUFromDataFile() {
+ // than relying on ICU's internal initialization.
+ void InitializeIcuTimeZone() {
+ #if BUILDFLAG(IS_FUCHSIA)
+-  // The platform-specific mechanisms used by ICU's detectHostTimeZone() to
+-  // determine the default time zone will not work on Fuchsia. Therefore,
+-  // proactively set the default system.
+-  // This is also required by TimeZoneMonitorFuchsia::ProfileMayHaveChanged(),
+-  // which uses the current default to detect whether the time zone changed in
+-  // the new profile.
+-  // If the system time zone cannot be obtained or is not understood by ICU,
+-  // the "unknown" time zone will be returned by createTimeZone() and used.
+   std::string zone_id =
+       FuchsiaIntlProfileWatcher::GetPrimaryTimeZoneIdForIcuInitialization();
+   icu::TimeZone::adoptDefault(
+       icu::TimeZone::createTimeZone(icu::UnicodeString::fromUTF8(zone_id)));
+ #elif BUILDFLAG(IS_CHROMEOS) || \
+     (BUILDFLAG(IS_LINUX) && !BUILDFLAG(IS_CASTOS)) || BUILDFLAG(IS_ANDROID)
+-  // To respond to the time zone change properly, the default time zone
+-  // cache in ICU has to be populated on starting up.
+-  // See TimeZoneMonitorLinux::NotifyClientsFromImpl().
+-  std::unique_ptr<icu::TimeZone> zone(icu::TimeZone::createDefault());
+-#endif  // BUILDFLAG(IS_FUSCHIA)
++  // Check if custom timezone already set (e.g. by GeoIP)
++  const icu::TimeZone& current_tz = icu::TimeZone::getDefault();
++  icu::UnicodeString current_id;
++  current_tz.getID(current_id);
++  
++  // Only set default if not already customized
++  if (current_id.length() == 0 || current_id == "Etc/Unknown") {
++    std::unique_ptr<icu::TimeZone> zone(icu::TimeZone::createDefault());
++  }
++#endif
+ }
+ 
+ enum class ICUCreateInstance {
+diff --git a/build/config/win/BUILD.gn b/build/config/win/BUILD.gn
+index 7f8aa872e66ce..1a47448509833 100644
+--- a/build/config/win/BUILD.gn
++++ b/build/config/win/BUILD.gn
+@@ -313,6 +313,7 @@ config("sdk_link") {
+ # their own.
+ config("common_linker_setup") {
+   ldflags = [
++    "/FORCE:MULTIPLE", 
+     "/FIXED:NO",
+     "/ignore:4199",
+     "/ignore:4221",
+diff --git a/chrome/BUILD.gn b/chrome/BUILD.gn
+index d3ca849dce4a2..fa33b86e3b641 100644
+--- a/chrome/BUILD.gn
++++ b/chrome/BUILD.gn
+@@ -157,6 +157,8 @@ if (!is_android && !is_mac) {
+   executable("chrome_initial") {
+     configs -= [ "//build/config/compiler:thinlto_optimize_default" ]
+     configs += [ "//build/config/compiler:thinlto_optimize_max" ]
++
++    
+     output_name = _chrome_output_name
+ 
+     # Because the sources list varies so significantly per-platform, generally
+@@ -233,6 +235,7 @@ if (!is_android && !is_mac) {
+         "//third_party/breakpad:breakpad_sender",
+         "//third_party/crashpad/crashpad/util",
+         "//ui/gl",
++        "//geoip:geoip",
+       ]
+ 
+       data_deps = [
+@@ -275,7 +278,7 @@ if (!is_android && !is_mac) {
+         ldflags = [ "/STACK:0x80000" ]
+       } else {
+         # Increase the initial stack size. The default is 1MB, this is 8MB.
+-        ldflags = [ "/STACK:0x800000" ]
++        ldflags = [ "/STACK:0x800000", "/FORCE:MULTIPLE" ]
+       }
+     } else if (use_aura) {
+       # Non-Windows aura entrypoint.
+@@ -398,6 +401,8 @@ if (is_win) {
+     configs -= [ "//build/config/compiler:thinlto_optimize_default" ]
+     configs += [ "//build/config/compiler:thinlto_optimize_max" ]
+ 
++    
++
+     defines = []
+ 
+     sources = [
+@@ -1169,6 +1174,8 @@ if (is_win) {
+     configs -= [ "//build/config/compiler:thinlto_optimize_default" ]
+     configs += [ "//build/config/compiler:thinlto_optimize_max" ]
+ 
++    
++
+     info_plist_target = ":chrome_framework_plist"
+     extra_substitutions = [
+       "CHROMIUM_BUNDLE_ID=$chrome_mac_bundle_id",
+@@ -1832,3 +1839,4 @@ if (_cros_generate_embed_section_target) {
+     deps = [ ":chrome" ]
+   }
+ }
++
+diff --git a/chrome/browser/BUILD.gn b/chrome/browser/BUILD.gn
+index 6d4761cd68627..85859a848c7fb 100644
+--- a/chrome/browser/BUILD.gn
++++ b/chrome/browser/BUILD.gn
+@@ -1,3 +1,4 @@
++
+ # Copyright 2014 The Chromium Authors
+ # Use of this source code is governed by a BSD-style license that can be
+ # found in the LICENSE file.
+@@ -4340,6 +4341,7 @@ static_library("browser") {
+ 
+     #!is_android
+     deps += [
++      "//geoip:geoip",
+       "//chrome/app:command_ids",
+       "//chrome/app/theme:chrome_unscaled_resources_grit",
+       "//chrome/app/vector_icons",
+diff --git a/chrome/browser/chrome_browser_main.cc b/chrome/browser/chrome_browser_main.cc
+index 2034b961d9922..471dd4b5375cc 100644
+--- a/chrome/browser/chrome_browser_main.cc
++++ b/chrome/browser/chrome_browser_main.cc
+@@ -137,6 +137,14 @@
+ #include "ui/color/color_provider_manager.h"
+ #include "ui/gl/gl_switches.h"
+ 
++#include "geoip/geoip.h"
++#include "chrome/common/chrome_switches.h"
++#include "services/device/public/cpp/geolocation/geoposition.h"
++#include "services/device/public/mojom/geoposition.mojom.h"
++#include "third_party/icu/source/i18n/unicode/timezone.h"
++#include "third_party/icu/source/common/unicode/locid.h"
++
++
+ // Per-platform #include blocks, in alphabetical order.
+ 
+ #if BUILDFLAG(IS_ANDROID)
+@@ -224,6 +232,8 @@
+ #if defined(ARCH_CPU_X86_64)
+ #include "base/mac/mac_util.h"
+ #include "base/threading/platform_thread.h"
++
++
+ #endif
+ #endif  // BUILDFLAG(IS_MAC)
+ 
+@@ -1047,6 +1057,62 @@ int ChromeBrowserMainParts::PreCreateThreads() {
+   // Create an instance of GpuModeManager to watch gpu mode pref change.
+   g_browser_process->gpu_mode_manager();
+ 
++    // Apply GeoIP fingerprinting if requested
++  const base::CommandLine* command_line =
++      base::CommandLine::ForCurrentProcess();
++  
++  if (command_line->HasSwitch(switches::kGeoIP)) {
++    LOG(INFO) << "GeoIP: Fetching settings...";
++    
++    // Get proxy URL
++    std::string proxy_url;
++    if (command_line->HasSwitch("proxy-server")) {
++      proxy_url = command_line->GetSwitchValueASCII("proxy-server");
++      LOG(INFO) << "GeoIP: Using proxy: " << proxy_url;
++    } else {
++      LOG(INFO) << "GeoIP: Using direct connection";
++    }
++    
++    // Call Rust library
++    const char* proxy_cstr = proxy_url.empty() ? nullptr : proxy_url.c_str();
++    BrowserConfig config = fetch_fingerprint_config(proxy_cstr);
++    
++    if (config.success && config.timezone && config.locale) {
++      LOG(INFO) << "GeoIP: Success!";
++      LOG(INFO) << "  Timezone: " << config.timezone;
++      LOG(INFO) << "  Locale: " << config.locale;
++      LOG(INFO) << "  Coords: " << config.latitude << ", " << config.longitude;
++      
++      // Set ICU Timezone
++      icu::UnicodeString tz_id(config.timezone, "UTF-8");
++      icu::TimeZone* tz = icu::TimeZone::createTimeZone(tz_id);
++      if (tz) {
++        icu::TimeZone::adoptDefault(tz);
++        LOG(INFO) << "GeoIP: Timezone applied";
++      }
++      
++      // Set ICU Locale
++      UErrorCode status = U_ZERO_ERROR;
++      icu::Locale locale(config.locale);
++      if (!locale.isBogus()) {
++        icu::Locale::setDefault(locale, status);
++        LOG(INFO) << "GeoIP: Locale applied";
++
++      // Apply --lang command line flag
++      base::CommandLine* cmd = base::CommandLine::ForCurrentProcess();
++      std::string locale_str(config.locale);
++      cmd->AppendSwitchASCII("lang", locale_str);
++      LOG(INFO) << "GeoIP: --lang flag set to " << locale_str;
++      }
++      
++    } else {
++      LOG(WARNING) << "GeoIP: Fetch failed, using defaults";
++    }
++    
++    // Free Rust memory
++    free_fingerprint_config(config);
++  }
++
+   return result_code_;
+ }
+ 
+@@ -2173,3 +2239,4 @@ bool ChromeBrowserMainParts::ProcessSingletonNotificationForTesting(
+                                               /*current_directory=*/{});
+ }
+ #endif  // BUILDFLAG(ENABLE_PROCESS_SINGLETON)
++
+diff --git a/chrome/common/chrome_switches.cc b/chrome/common/chrome_switches.cc
+index 5154a618cfab7..0313e8bddd850 100644
+--- a/chrome/common/chrome_switches.cc
++++ b/chrome/common/chrome_switches.cc
+@@ -363,6 +363,9 @@ const char kForceFirstRun[] = "force-first-run";
+ // showing the First Run experience).
+ const char kForceWhatsNew[] = "force-whats-new";
+ 
++// Enable automatic geo fingerprinting via proxy
++const char kGeoIP[] = "geoip";
++
+ // Does not show the crash restore bubble when the browser is started during the
+ // system startup phase in ChromeOS, if the ChromeOS full restore feature is
+ // enabled, because the ChromeOS full restore notification is shown for the user
+diff --git a/chrome/common/chrome_switches.h b/chrome/common/chrome_switches.h
+index bb21432d0818d..aed7b77437ea9 100644
+--- a/chrome/common/chrome_switches.h
++++ b/chrome/common/chrome_switches.h
+@@ -122,6 +122,7 @@ extern const char kForceDevToolsAvailable[];
+ extern const char kForceFirstRun[];
+ extern const char kRefreshPlatformPolicy[];
+ extern const char kForceWhatsNew[];
++extern const char kGeoIP[];
+ extern const char kHideCrashRestoreBubble[];
+ extern const char kHomePage[];
+ #if !BUILDFLAG(IS_ANDROID)
+diff --git a/chrome/test/chromedriver/chrome/devtools_client_impl.cc b/chrome/test/chromedriver/chrome/devtools_client_impl.cc
+index 1168bd5e5da95..96ae4554a7759 100644
+--- a/chrome/test/chromedriver/chrome/devtools_client_impl.cc
++++ b/chrome/test/chromedriver/chrome/devtools_client_impl.cc
+@@ -572,38 +572,31 @@ Status DevToolsClientImpl::SetupTabTarget() {
+ Status DevToolsClientImpl::SetUpDevTools() {
+   if (id_ != kBrowserwideDevToolsClientId &&
+       (GetOwner() == nullptr || !GetOwner()->IsServiceWorker())) {
+-    // The method Page.addScriptToEvaluateOnNewDocument used below has no effect
+-    // until Page domain is enabled.
+-    // In majority of cases the event listeners like NavigationTracker enable
+-    // this domain quickly enough to mask the problem.
+-    // In rare occasions (2% of cases) they kick in too late and therefore the
+-    // tests like testExecuteScriptWithDeletedGlobalJSON can fail.
+-    // To avoid such flakiness we enable the Page domain first.
+     SendCommandAndIgnoreResponse("Page.enable", base::Value::Dict());
+ 
+-    // This is a page or frame level DevToolsClient
+-    base::Value::Dict params;
+-    std::string script =
+-        "(function () {"
+-        "window.cdc_adoQpoasnfa76pfcZLmcfl_Array = window.Array;"
+-        "window.cdc_adoQpoasnfa76pfcZLmcfl_Object = window.Object;"
+-        "window.cdc_adoQpoasnfa76pfcZLmcfl_Promise = window.Promise;"
+-        "window.cdc_adoQpoasnfa76pfcZLmcfl_Proxy = window.Proxy;"
+-        "window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol = window.Symbol;"
+-        "window.cdc_adoQpoasnfa76pfcZLmcfl_JSON = window.JSON;"
+-        "window.cdc_adoQpoasnfa76pfcZLmcfl_Window = window.Window;"
+-        "}) ();";
+-    params.Set("source", script);
+-    Status status = SendCommandAndIgnoreResponse(
+-        "Page.addScriptToEvaluateOnNewDocument", params);
+-    if (status.IsError())
+-      return status;
+-
+-    params.clear();
+-    params.Set("expression", script);
+-    status = SendCommandAndIgnoreResponse("Runtime.evaluate", params);
+-    if (status.IsError())
+-      return status;
++    // Inject window.chrome object for stealth mode
++    base::Value::Dict chrome_params;
++    std::string chrome_script =
++        "(function() {"
++        "  if (!window.chrome) {"
++        "    window.chrome = {};"
++        "  }"
++        "  if (!window.chrome.runtime) {"
++        "    window.chrome.runtime = {};"
++        "  }"
++        "  if (!window.chrome.loadTimes) {"
++        "    window.chrome.loadTimes = function() {};"
++        "  }"
++        "  if (!window.chrome.csi) {"
++        "    window.chrome.csi = function() {};"
++        "  }"
++        "  if (!window.chrome.app) {"
++        "    window.chrome.app = {};"
++        "  }"
++        "})();";
++    chrome_params.Set("source", chrome_script);
++    SendCommandAndIgnoreResponse(
++        "Page.addScriptToEvaluateOnNewDocument", chrome_params);
+   }
+ 
+   return Status{kOk};
+diff --git a/components/embedder_support/user_agent_utils.cc b/components/embedder_support/user_agent_utils.cc
+index eb4a065f0a695..c1f0f71aeca67 100644
+--- a/components/embedder_support/user_agent_utils.cc
++++ b/components/embedder_support/user_agent_utils.cc
+@@ -245,9 +245,10 @@ const blink::UserAgentBrandList GetUserAgentBrandFullVersionListInternal(
+ std::string GetUserAgentInternal(
+     UserAgentReductionEnterprisePolicyState user_agent_reduction) {
+   std::string product = GetProductAndVersion(user_agent_reduction);
+-  if (base::CommandLine::ForCurrentProcess()->HasSwitch(kHeadless)) {
+-    product.insert(0, "Headless");
+-  }
++  // Headless detection removed for stealth mode
++  // if (base::CommandLine::ForCurrentProcess()->HasSwitch(kHeadless)) {
++  //   product.insert(0, "Headless");
++  // }
+ 
+ #if BUILDFLAG(IS_ANDROID) || BUILDFLAG(IS_IOS)
+   if (base::CommandLine::ForCurrentProcess()->HasSwitch(kUseMobileUserAgent)) {
+diff --git a/content/app/BUILD.gn b/content/app/BUILD.gn
+index e3c038ff40c5f..c50ea5ec59af1 100644
+--- a/content/app/BUILD.gn
++++ b/content/app/BUILD.gn
+@@ -88,8 +88,7 @@ source_set("content_main_runner_app") {
+            "//content/utility",
+            "//content/zygote",
+            "//third_party/tflite:buildflags",
+-           "//tools/v8_context_snapshot:buildflags",
+-         ]
++           "//tools/v8_context_snapshot:buildflags",         ]
+   if (build_tflite_with_xnnpack) {
+     deps += [ "//third_party/cpuinfo" ]
+   }
+@@ -173,3 +172,6 @@ group("for_content_tests") {
+     public_deps = [ ":app" ]
+   }
+ }
++
++
++
+diff --git a/content/app/content_main_runner_impl.cc b/content/app/content_main_runner_impl.cc
+index 86bb51dbba93f..4a8ee1f548610 100644
+--- a/content/app/content_main_runner_impl.cc
++++ b/content/app/content_main_runner_impl.cc
+@@ -19,7 +19,6 @@
+ 
+ #include "base/allocator/allocator_check.h"
+ #include "base/allocator/partition_alloc_support.h"
+-#include "base/android/background_thread_pool_field_trial.h"
+ #include "base/at_exit.h"
+ #include "base/base_switches.h"
+ #include "base/command_line.h"
+@@ -187,6 +186,7 @@
+ #endif
+ 
+ #if BUILDFLAG(IS_ANDROID)
++#include "base/android/background_thread_pool_field_trial.h"
+ #include "base/system/sys_info.h"
+ #include "content/browser/android/battery_metrics.h"
+ #include "content/browser/android/browser_startup_controller.h"
+diff --git a/third_party/blink/renderer/core/frame/local_frame.cc b/third_party/blink/renderer/core/frame/local_frame.cc
+index 0b8972e0ab8ff..e7982e944879f 100644
+--- a/third_party/blink/renderer/core/frame/local_frame.cc
++++ b/third_party/blink/renderer/core/frame/local_frame.cc
+@@ -36,6 +36,9 @@
+ #include <utility>
+ #include <vector>
+ 
++#include <random>
++#include <chrono>
++
+ #include "base/check_deref.h"
+ #include "base/debug/crash_logging.h"
+ #include "base/debug/dump_without_crashing.h"
+@@ -1865,7 +1868,28 @@ double LocalFrame::DevicePixelRatio() const {
+ 
+   double ratio = page_->InspectorDeviceScaleFactorOverride();
+   ratio *= LayoutZoomFactor();
+-  return ratio;
++  
++  // Randomize devicePixelRatio for fingerprinting resistance
++  // 70% = 1.0, 20% = 0.9, 10% = 1.1
++  static double dpr_modifier = 0.0;
++  if (dpr_modifier == 0.0) {
++    auto now = std::chrono::high_resolution_clock::now();
++    auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(
++        now.time_since_epoch()).count();
++    std::mt19937 gen(static_cast<unsigned>(nanos));
++    std::uniform_int_distribution<> dis(1, 100);
++    int random_percent = dis(gen);
++    
++    if (random_percent <= 70) {
++      dpr_modifier = 1.0;  // 70% chance
++    } else if (random_percent <= 90) {
++      dpr_modifier = 0.899999976;  // 20% chance
++    } else {
++      dpr_modifier = 1.100000023;  // 10% chance
++    }
++  }
++  
++  return ratio * dpr_modifier;
+ }
+ 
+ String LocalFrame::SelectedText() const {
+diff --git a/third_party/blink/renderer/core/frame/navigator_concurrent_hardware.cc b/third_party/blink/renderer/core/frame/navigator_concurrent_hardware.cc
+index f5c0db2d1b58d..fe355a93e778f 100644
+--- a/third_party/blink/renderer/core/frame/navigator_concurrent_hardware.cc
++++ b/third_party/blink/renderer/core/frame/navigator_concurrent_hardware.cc
+@@ -5,11 +5,30 @@
+ #include "third_party/blink/renderer/core/frame/navigator_concurrent_hardware.h"
+ 
+ #include "base/system/sys_info.h"
++#include "base/rand_util.h"
++
++#include <random>
++#include <chrono>
+ 
+ namespace blink {
+ 
+ unsigned NavigatorConcurrentHardware::hardwareConcurrency() const {
+-  return static_cast<unsigned>(base::SysInfo::NumberOfProcessors());
++  static const unsigned kCpuConfigs[] = {
++    4, 6, 8, 8, 12, 16, 16, 24, 32, 64
++  };
++  
++  static unsigned selected_cores = 0;
++  if (selected_cores == 0) {
++    // Random seed from current time
++    auto now = std::chrono::high_resolution_clock::now();
++    auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(
++        now.time_since_epoch()).count();
++    std::mt19937 gen(static_cast<unsigned>(nanos));
++    std::uniform_int_distribution<> dis(0, 9);
++    selected_cores = kCpuConfigs[dis(gen)];
++  }
++  
++  return selected_cores;
+ }
+ 
+ }  // namespace blink
+diff --git a/third_party/blink/renderer/core/frame/navigator_device_memory.cc b/third_party/blink/renderer/core/frame/navigator_device_memory.cc
+index 2876aad29853b..bc2d927513ca9 100644
+--- a/third_party/blink/renderer/core/frame/navigator_device_memory.cc
++++ b/third_party/blink/renderer/core/frame/navigator_device_memory.cc
+@@ -10,11 +10,30 @@
+ #include "third_party/blink/public/mojom/use_counter/metrics/web_feature.mojom-shared.h"
+ #include "third_party/blink/renderer/core/dom/document.h"
+ #include "third_party/blink/renderer/core/frame/local_dom_window.h"
++#include "base/rand_util.h"
++
++#include <random>
++#include <chrono>
+ 
+ namespace blink {
+ 
+ float NavigatorDeviceMemory::deviceMemory() const {
+-  return ApproximatedDeviceMemory::GetApproximatedDeviceMemory();
++  static const float kRamConfigs[] = {
++    4.0f, 8.0f, 8.0f, 16.0f, 16.0f, 32.0f, 32.0f, 64.0f, 128.0f, 256.0f
++  };
++  
++  static float selected_ram = 0.0f;
++  if (selected_ram == 0.0f) {
++    // Random seed from current time
++    auto now = std::chrono::high_resolution_clock::now();
++    auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(
++        now.time_since_epoch()).count();
++    std::mt19937 gen(static_cast<unsigned>(nanos));
++    std::uniform_int_distribution<> dis(0, 9);
++    selected_ram = kRamConfigs[dis(gen)];
++  }
++  
++  return selected_ram;
+ }
+ 
+ }  // namespace blink
+diff --git a/third_party/blink/renderer/core/frame/navigator_id.cc b/third_party/blink/renderer/core/frame/navigator_id.cc
+index 50a1727f8dbd5..bdc87f6cfb4cc 100644
+--- a/third_party/blink/renderer/core/frame/navigator_id.cc
++++ b/third_party/blink/renderer/core/frame/navigator_id.cc
+@@ -31,6 +31,9 @@
+ 
+ #include "third_party/blink/renderer/core/frame/navigator_id.h"
+ 
++#include <random>
++#include <chrono>
++
+ #include "base/feature_list.h"
+ #include "build/build_config.h"
+ #include "third_party/blink/public/common/features.h"
+@@ -40,6 +43,11 @@
+ #include <sys/utsname.h>
+ #include "third_party/blink/renderer/platform/wtf/thread_specific.h"
+ #include "third_party/blink/renderer/platform/wtf/threading.h"
++
++#include "base/process/process.h"
++#include "base/rand_util.h"
++
++
+ #endif
+ 
+ namespace blink {
+@@ -63,8 +71,25 @@ String NavigatorID::platform() const {
+   // Match Safari and Mozilla on Mac x86.
+   return "MacIntel";
+ #elif BUILDFLAG(IS_WIN)
+-  // Match Safari and Mozilla on Windows.
+-  return "Win32";
++  // Randomize between Win32 and Win64 for fingerprinting resistance
++  static const char* kPlatformConfigs[] = {
++    "Win32", "Win32", "Win32",
++    "Win64", "Win64", "Win64", "Win64"
++  };
++  
++  static const char* selected_platform = nullptr;
++  if (selected_platform == nullptr) {
++    // Random seed from current time in nanoseconds
++    auto now = std::chrono::high_resolution_clock::now();
++    auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(
++        now.time_since_epoch()).count();
++    std::mt19937 gen(static_cast<unsigned>(nanos));
++    std::uniform_int_distribution<> dis(0, 6);
++    selected_platform = kPlatformConfigs[dis(gen)];
++  }
++  
++  return selected_platform;
++
+ #else  // Unix-like systems
+   struct utsname osname;
+   DEFINE_THREAD_SAFE_STATIC_LOCAL(ThreadSpecific<String>, platform_name, ());
+diff --git a/third_party/blink/renderer/platform/language.cc b/third_party/blink/renderer/platform/language.cc
+index 238920d61b7c4..38b3f5eab541f 100644
+--- a/third_party/blink/renderer/platform/language.cc
++++ b/third_party/blink/renderer/platform/language.cc
+@@ -24,6 +24,7 @@
+  */
+ 
+ #include "third_party/blink/renderer/platform/language.h"
++#include "base/command_line.h"
+ 
+ #include "third_party/blink/public/platform/platform.h"
+ #include "third_party/blink/renderer/platform/text/platform_locale.h"
+@@ -92,6 +93,16 @@ void OverrideUserPreferredLanguagesForTesting(
+ }
+ 
+ AtomicString DefaultLanguage() {
++  // Check --lang command line flag first (GeoIP stealth mode)
++  base::CommandLine* cmd = base::CommandLine::ForCurrentProcess();
++  if (cmd && cmd->HasSwitch("lang")) {
++    std::string lang_flag = cmd->GetSwitchValueASCII("lang");
++    if (!lang_flag.empty()) {
++      return AtomicString(lang_flag.c_str());
++    }
++  }
++  
++  // Fallback to profile preferences
+   Vector<AtomicString>& override = PreferredLanguagesOverride();
+   if (!override.empty())
+     return override[0];
+@@ -159,3 +170,4 @@ wtf_size_t IndexOfBestMatchingLanguageInList(
+ }
+ 
+ }  // namespace blink
++
