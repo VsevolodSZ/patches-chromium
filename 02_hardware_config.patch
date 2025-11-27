@@ -1,0 +1,61 @@
+diff --git a/third_party/blink/renderer/core/frame/hardware_config.h b/third_party/blink/renderer/core/frame/hardware_config.h
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/third_party/blink/renderer/core/frame/hardware_config.h
+@@ -0,0 +1,56 @@
++// Copyright 2014 The Chromium Authors
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef THIRD_PARTY_BLINK_RENDERER_CORE_FRAME_HARDWARE_CONFIG_H_
++#define THIRD_PARTY_BLINK_RENDERER_CORE_FRAME_HARDWARE_CONFIG_H_
++
++#include <random>
++#include <chrono>
++#include "third_party/blink/renderer/core/frame/webgl_gpu_params.h"
++
++namespace blink {
++
++struct HardwareConfig {
++  unsigned cores;
++  float ram_gb;
++  const char* gpu_vendor;
++  const char* gpu_name;
++  const WebGLGPUParams* webgl_params;
++};
++
++// Реальные комбинации конфигураций с GPU и WebGL параметрами
++constexpr HardwareConfig kHardwareConfigs[] = {
++  {4, 8.0f, "NVIDIA", "NVIDIA GeForce GTX 1060", &kWebGLGTX1060Params},
++  {4, 16.0f, "NVIDIA", "NVIDIA GeForce GTX 1050 Ti", &kWebGLGTX1050TiParams},
++  {6, 16.0f, "NVIDIA", "NVIDIA GeForce GTX 1650 Ti", &kWebGLGTX1650TiParams},
++  {8, 16.0f, "NVIDIA", "NVIDIA GeForce RTX 2060", &kWebGLRTX2060Params},
++  {8, 32.0f, "NVIDIA", "NVIDIA GeForce RTX 3060", &kWebGLRTX3060Params},
++  {12, 32.0f, "AMD", "AMD Radeon RX 5700 XT", &kWebGLAMDRX5700XTParams},
++  {16, 32.0f, "NVIDIA", "NVIDIA GeForce RTX 4070", &kWebGLRTX4070Params},
++};
++
++// Функция для получения выбранной конфигурации
++inline HardwareConfig GetSelectedHardwareConfig() {
++  static HardwareConfig selected_config = {0, 0.0f};
++  static bool initialized = false;
++
++  if (!initialized) {
++    // Выбираем конфигурацию один раз при первом запросе
++    auto now = std::chrono::high_resolution_clock::now();
++    auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(
++        now.time_since_epoch()).count();
++    std::mt19937 gen(static_cast<unsigned>(nanos));
++    std::uniform_int_distribution<> dis(0, 6); // 7 конфигураций (0-6)
++
++    selected_config = kHardwareConfigs[dis(gen)];
++    initialized = true;
++  }
++
++  return selected_config;
++}
++
++}  // namespace blink
++
++#endif  // THIRD_PARTY_BLINK_RENDERER_CORE_FRAME_HARDWARE_CONFIG_H_

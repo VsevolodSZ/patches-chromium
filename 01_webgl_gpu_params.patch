@@ -1,0 +1,709 @@
+diff --git a/third_party/blink/renderer/core/frame/webgl_gpu_params.h b/third_party/blink/renderer/core/frame/webgl_gpu_params.h
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/third_party/blink/renderer/core/frame/webgl_gpu_params.h
+@@ -0,0 +1,738 @@
++// Copyright 2014 The Chromium Authors
++// Use of this source code is governed by a BSD-style license that can be
++// found in the LICENSE file.
++
++#ifndef THIRD_PARTY_BLINK_RENDERER_CORE_FRAME_WEBGL_GPU_PARAMS_H_
++#define THIRD_PARTY_BLINK_RENDERER_CORE_FRAME_WEBGL_GPU_PARAMS_H_
++
++namespace blink {
++
++// WebGL GPU parameters structure
++struct WebGLGPUParams {
++  // UNMASKED параметры
++  const char* unmasked_vendor;
++  const char* unmasked_renderer;
++
++  // String параметры
++  const char* vendor;
++  const char* renderer;
++  const char* version;
++  const char* shading_language_version;
++
++  // Integer параметры
++  struct {
++    unsigned int aliased_line_width_range[2];
++    unsigned int aliased_point_size_range[2];
++    unsigned int max_3d_texture_size;
++    unsigned int max_array_texture_layers;
++    unsigned int max_client_wait_timeout_webgl;
++    unsigned int max_color_attachments;
++    unsigned int max_combined_fragment_uniform_components;
++    unsigned int max_combined_texture_image_units;
++    unsigned int max_combined_uniform_blocks;
++    unsigned int max_combined_vertex_uniform_components;
++    unsigned int max_cube_map_texture_size;
++    unsigned int max_draw_buffers;
++    unsigned int max_draw_buffers_webgl;
++    unsigned int max_elements_indices;
++    unsigned int max_elements_vertices;
++    unsigned int max_element_index;
++    unsigned int max_fragment_input_components;
++    unsigned int max_fragment_uniform_blocks;
++    unsigned int max_fragment_uniform_components;
++    unsigned int max_fragment_uniform_vectors;
++    unsigned int max_program_texel_offset;
++    unsigned int max_renderbuffer_size;
++    unsigned int max_samples;
++    unsigned int max_server_wait_timeout;
++    unsigned int max_texture_image_units;
++    unsigned int max_texture_lod_bias;
++    unsigned int max_texture_size;
++    unsigned int max_transform_feedback_interleaved_components;
++    unsigned int max_transform_feedback_separate_attribs;
++    unsigned int max_transform_feedback_separate_components;
++    unsigned int max_uniform_block_size;
++    unsigned int max_uniform_buffer_bindings;
++    unsigned int max_varying_components;
++    unsigned int max_varying_vectors;
++    unsigned int max_vertex_attribs;
++    unsigned int max_vertex_output_components;
++    unsigned int max_vertex_texture_image_units;
++    unsigned int max_vertex_uniform_blocks;
++    unsigned int max_vertex_uniform_components;
++    unsigned int max_vertex_uniform_vectors;
++    unsigned int max_viewport_dims[2];
++    unsigned int stencil_back_value_mask;
++    unsigned int stencil_back_writemask;
++    unsigned int stencil_value_mask;
++    unsigned int stencil_writemask;
++    unsigned int subpixel_bits;
++  } int_params;
++
++  // Float параметры
++  struct {
++    float max_texture_max_anisotropy_ext;
++
++    // Fragment shader precision
++    int fragment_shader_high_float_precision;
++    int fragment_shader_high_float_range_max;
++    int fragment_shader_high_float_range_min;
++    int fragment_shader_high_int_precision;
++    int fragment_shader_high_int_range_max;
++    int fragment_shader_high_int_range_min;
++    int fragment_shader_low_float_precision;
++    int fragment_shader_low_float_range_max;
++    int fragment_shader_low_float_range_min;
++    int fragment_shader_medium_float_precision;
++    int fragment_shader_medium_float_range_max;
++    int fragment_shader_medium_float_range_min;
++
++    // Vertex shader precision
++    int vertex_shader_high_float_precision;
++    int vertex_shader_high_float_range_max;
++    int vertex_shader_high_float_range_min;
++    int vertex_shader_high_int_precision;
++    int vertex_shader_high_int_range_max;
++    int vertex_shader_high_int_range_min;
++    int vertex_shader_low_float_precision;
++    int vertex_shader_low_float_range_max;
++    int vertex_shader_low_float_range_min;
++    int vertex_shader_medium_float_precision;
++    int vertex_shader_medium_float_range_max;
++    int vertex_shader_medium_float_range_min;
++  } float_params;
++};
++
++// RTX 3060 параметры
++constexpr WebGLGPUParams kWebGLRTX3060Params = {
++  .unmasked_vendor = "Google Inc. (NVIDIA)",
++  .unmasked_renderer = "ANGLE (NVIDIA, NVIDIA GeForce RTX 3060 Direct3D11 vs_5_0 ps_5_0, D3D11)",
++  .vendor = "WebKit",
++  .renderer = "WebKit WebGL",
++  .version = "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
++  .shading_language_version = "WebGL GLSL ES 3.00 (OpenGL ES GLSL ES 3.0 Chromium)",
++  .int_params = {
++    .aliased_line_width_range = {1, 1},
++    .aliased_point_size_range = {1, 1024},
++    .max_3d_texture_size = 2048,
++    .max_array_texture_layers = 2048,
++    .max_client_wait_timeout_webgl = 0,
++    .max_color_attachments = 8,
++    .max_combined_fragment_uniform_components = 200704,
++    .max_combined_texture_image_units = 32,
++    .max_combined_uniform_blocks = 24,
++    .max_combined_vertex_uniform_components = 212988,
++    .max_cube_map_texture_size = 16384,
++    .max_draw_buffers = 8,
++    .max_draw_buffers_webgl = 8,
++    .max_elements_indices = 2147483647,
++    .max_elements_vertices = 2147483647,
++    .max_element_index = 4294967294,
++    .max_fragment_input_components = 120,
++    .max_fragment_uniform_blocks = 12,
++    .max_fragment_uniform_components = 4096,
++    .max_fragment_uniform_vectors = 1024,
++    .max_program_texel_offset = 7,
++    .max_renderbuffer_size = 16384,
++    .max_samples = 8,
++    .max_server_wait_timeout = 0,
++    .max_texture_image_units = 16,
++    .max_texture_lod_bias = 2,
++    .max_texture_size = 16384,
++    .max_transform_feedback_interleaved_components = 120,
++    .max_transform_feedback_separate_attribs = 4,
++    .max_transform_feedback_separate_components = 4,
++    .max_uniform_block_size = 65536,
++    .max_uniform_buffer_bindings = 24,
++    .max_varying_components = 120,
++    .max_varying_vectors = 30,
++    .max_vertex_attribs = 16,
++    .max_vertex_output_components = 120,
++    .max_vertex_texture_image_units = 16,
++    .max_vertex_uniform_blocks = 12,
++    .max_vertex_uniform_components = 16380,
++    .max_vertex_uniform_vectors = 4095,
++    .max_viewport_dims = {32767, 32767},
++    .stencil_back_value_mask = 4294967295,
++    .stencil_back_writemask = 4294967295,
++    .stencil_value_mask = 4294967295,
++    .stencil_writemask = 4294967295,
++    .subpixel_bits = 4,
++  },
++  .float_params = {
++    .max_texture_max_anisotropy_ext = 16.0f,
++    .fragment_shader_high_float_precision = 23,
++    .fragment_shader_high_float_range_max = 127,
++    .fragment_shader_high_float_range_min = 127,
++    .fragment_shader_high_int_precision = 0,
++    .fragment_shader_high_int_range_max = 30,
++    .fragment_shader_high_int_range_min = 31,
++    .fragment_shader_low_float_precision = 23,
++    .fragment_shader_low_float_range_max = 127,
++    .fragment_shader_low_float_range_min = 127,
++    .fragment_shader_medium_float_precision = 23,
++    .fragment_shader_medium_float_range_max = 127,
++    .fragment_shader_medium_float_range_min = 127,
++    .vertex_shader_high_float_precision = 23,
++    .vertex_shader_high_float_range_max = 127,
++    .vertex_shader_high_float_range_min = 127,
++    .vertex_shader_high_int_precision = 0,
++    .vertex_shader_high_int_range_max = 30,
++    .vertex_shader_high_int_range_min = 31,
++    .vertex_shader_low_float_precision = 23,
++    .vertex_shader_low_float_range_max = 127,
++    .vertex_shader_low_float_range_min = 127,
++    .vertex_shader_medium_float_precision = 23,
++    .vertex_shader_medium_float_range_max = 127,
++    .vertex_shader_medium_float_range_min = 127,
++  },
++};
++
++// AMD Radeon RX 5700 XT параметры
++constexpr WebGLGPUParams kWebGLAMDRX5700XTParams = {
++  .unmasked_vendor = "Google Inc. (AMD)",
++  .unmasked_renderer = "ANGLE (AMD, AMD Radeon RX 5700 XT Direct3D11 vs_5_0 ps_5_0, D3D11)",
++  .vendor = "WebKit",
++  .renderer = "WebKit WebGL",
++  .version = "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
++  .shading_language_version = "WebGL GLSL ES 3.00 (OpenGL ES GLSL ES 3.0 Chromium)",
++  .int_params = {
++    .aliased_line_width_range = {1, 1},
++    .aliased_point_size_range = {1, 1024},
++    .max_3d_texture_size = 2048,
++    .max_array_texture_layers = 2048,
++    .max_client_wait_timeout_webgl = 0,
++    .max_color_attachments = 8,
++    .max_combined_fragment_uniform_components = 200704,
++    .max_combined_texture_image_units = 32,
++    .max_combined_uniform_blocks = 24,
++    .max_combined_vertex_uniform_components = 212992,
++    .max_cube_map_texture_size = 16384,
++    .max_draw_buffers = 8,
++    .max_draw_buffers_webgl = 8,
++    .max_elements_indices = 2147483647,
++    .max_elements_vertices = 2147483647,
++    .max_element_index = 4294967294,
++    .max_fragment_input_components = 120,
++    .max_fragment_uniform_blocks = 12,
++    .max_fragment_uniform_components = 4096,
++    .max_fragment_uniform_vectors = 1024,
++    .max_program_texel_offset = 7,
++    .max_renderbuffer_size = 16384,
++    .max_samples = 8,
++    .max_server_wait_timeout = 0,
++    .max_texture_image_units = 16,
++    .max_texture_lod_bias = 2,
++    .max_texture_size = 16384,
++    .max_transform_feedback_interleaved_components = 120,
++    .max_transform_feedback_separate_attribs = 4,
++    .max_transform_feedback_separate_components = 4,
++    .max_uniform_block_size = 65536,
++    .max_uniform_buffer_bindings = 24,
++    .max_varying_components = 120,
++    .max_varying_vectors = 30,
++    .max_vertex_attribs = 16,
++    .max_vertex_output_components = 120,
++    .max_vertex_texture_image_units = 16,
++    .max_vertex_uniform_blocks = 12,
++    .max_vertex_uniform_components = 16384,
++    .max_vertex_uniform_vectors = 4096,
++    .max_viewport_dims = {32767, 32767},
++    .stencil_back_value_mask = 4294967295,
++    .stencil_back_writemask = 4294967295,
++    .stencil_value_mask = 4294967295,
++    .stencil_writemask = 4294967295,
++    .subpixel_bits = 4,
++  },
++  .float_params = {
++    .max_texture_max_anisotropy_ext = 16.0f,
++    .fragment_shader_high_float_precision = 23,
++    .fragment_shader_high_float_range_max = 127,
++    .fragment_shader_high_float_range_min = 127,
++    .fragment_shader_high_int_precision = 0,
++    .fragment_shader_high_int_range_max = 30,
++    .fragment_shader_high_int_range_min = 31,
++    .fragment_shader_low_float_precision = 23,
++    .fragment_shader_low_float_range_max = 127,
++    .fragment_shader_low_float_range_min = 127,
++    .fragment_shader_medium_float_precision = 23,
++    .fragment_shader_medium_float_range_max = 127,
++    .fragment_shader_medium_float_range_min = 127,
++    .vertex_shader_high_float_precision = 23,
++    .vertex_shader_high_float_range_max = 127,
++    .vertex_shader_high_float_range_min = 127,
++    .vertex_shader_high_int_precision = 0,
++    .vertex_shader_high_int_range_max = 30,
++    .vertex_shader_high_int_range_min = 31,
++    .vertex_shader_low_float_precision = 23,
++    .vertex_shader_low_float_range_max = 127,
++    .vertex_shader_low_float_range_min = 127,
++    .vertex_shader_medium_float_precision = 23,
++    .vertex_shader_medium_float_range_max = 127,
++    .vertex_shader_medium_float_range_min = 127,
++  },
++};
++
++// NVIDIA GeForce GTX 1060 параметры
++constexpr WebGLGPUParams kWebGLGTX1060Params = {
++  .unmasked_vendor = "Google Inc. (NVIDIA)",
++  .unmasked_renderer = "ANGLE (NVIDIA, NVIDIA GeForce GTX 1060 6GB Direct3D11 vs_5_0 ps_5_0, D3D11)",
++  .vendor = "WebKit",
++  .renderer = "WebKit WebGL",
++  .version = "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
++  .shading_language_version = "WebGL GLSL ES 3.00 (OpenGL ES GLSL ES 3.0 Chromium)",
++  .int_params = {
++    .aliased_line_width_range = {1, 1},
++    .aliased_point_size_range = {1, 1024},
++    .max_3d_texture_size = 2048,
++    .max_array_texture_layers = 2048,
++    .max_client_wait_timeout_webgl = 0,
++    .max_color_attachments = 8,
++    .max_combined_fragment_uniform_components = 200704,
++    .max_combined_texture_image_units = 32,
++    .max_combined_uniform_blocks = 24,
++    .max_combined_vertex_uniform_components = 212988,
++    .max_cube_map_texture_size = 16384,
++    .max_draw_buffers = 8,
++    .max_draw_buffers_webgl = 8,
++    .max_elements_indices = 2147483647,
++    .max_elements_vertices = 2147483647,
++    .max_element_index = 4294967294,
++    .max_fragment_input_components = 120,
++    .max_fragment_uniform_blocks = 12,
++    .max_fragment_uniform_components = 4096,
++    .max_fragment_uniform_vectors = 1024,
++    .max_program_texel_offset = 7,
++    .max_renderbuffer_size = 16384,
++    .max_samples = 8,
++    .max_server_wait_timeout = 0,
++    .max_texture_image_units = 16,
++    .max_texture_lod_bias = 2,
++    .max_texture_size = 16384,
++    .max_transform_feedback_interleaved_components = 120,
++    .max_transform_feedback_separate_attribs = 4,
++    .max_transform_feedback_separate_components = 4,
++    .max_uniform_block_size = 65536,
++    .max_uniform_buffer_bindings = 24,
++    .max_varying_components = 120,
++    .max_varying_vectors = 30,
++    .max_vertex_attribs = 16,
++    .max_vertex_output_components = 120,
++    .max_vertex_texture_image_units = 16,
++    .max_vertex_uniform_blocks = 12,
++    .max_vertex_uniform_components = 16380,
++    .max_vertex_uniform_vectors = 4095,
++    .max_viewport_dims = {32767, 32767},
++    .stencil_back_value_mask = 4294967295,
++    .stencil_back_writemask = 4294967295,
++    .stencil_value_mask = 4294967295,
++    .stencil_writemask = 4294967295,
++    .subpixel_bits = 4,
++  },
++  .float_params = {
++    .max_texture_max_anisotropy_ext = 16.0f,
++    .fragment_shader_high_float_precision = 23,
++    .fragment_shader_high_float_range_max = 127,
++    .fragment_shader_high_float_range_min = 127,
++    .fragment_shader_high_int_precision = 0,
++    .fragment_shader_high_int_range_max = 30,
++    .fragment_shader_high_int_range_min = 31,
++    .fragment_shader_low_float_precision = 23,
++    .fragment_shader_low_float_range_max = 127,
++    .fragment_shader_low_float_range_min = 127,
++    .fragment_shader_medium_float_precision = 23,
++    .fragment_shader_medium_float_range_max = 127,
++    .fragment_shader_medium_float_range_min = 127,
++    .vertex_shader_high_float_precision = 23,
++    .vertex_shader_high_float_range_max = 127,
++    .vertex_shader_high_float_range_min = 127,
++    .vertex_shader_high_int_precision = 0,
++    .vertex_shader_high_int_range_max = 30,
++    .vertex_shader_high_int_range_min = 31,
++    .vertex_shader_low_float_precision = 23,
++    .vertex_shader_low_float_range_max = 127,
++    .vertex_shader_low_float_range_min = 127,
++    .vertex_shader_medium_float_precision = 23,
++    .vertex_shader_medium_float_range_max = 127,
++    .vertex_shader_medium_float_range_min = 127,
++  },
++};
++
++// NVIDIA GeForce RTX 2060 параметры
++constexpr WebGLGPUParams kWebGLRTX2060Params = {
++  .unmasked_vendor = "Google Inc. (NVIDIA)",
++  .unmasked_renderer = "ANGLE (NVIDIA, NVIDIA GeForce RTX 2060 Direct3D11 vs_5_0 ps_5_0, D3D11)",
++  .vendor = "WebKit",
++  .renderer = "WebKit WebGL",
++  .version = "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
++  .shading_language_version = "WebGL GLSL ES 3.00 (OpenGL ES GLSL ES 3.0 Chromium)",
++  .int_params = {
++    .aliased_line_width_range = {1, 1},
++    .aliased_point_size_range = {1, 1024},
++    .max_3d_texture_size = 2048,
++    .max_array_texture_layers = 2048,
++    .max_client_wait_timeout_webgl = 0,
++    .max_color_attachments = 8,
++    .max_combined_fragment_uniform_components = 200704,
++    .max_combined_texture_image_units = 32,
++    .max_combined_uniform_blocks = 24,
++    .max_combined_vertex_uniform_components = 212988,
++    .max_cube_map_texture_size = 16384,
++    .max_draw_buffers = 8,
++    .max_draw_buffers_webgl = 8,
++    .max_elements_indices = 2147483647,
++    .max_elements_vertices = 2147483647,
++    .max_element_index = 4294967294,
++    .max_fragment_input_components = 120,
++    .max_fragment_uniform_blocks = 12,
++    .max_fragment_uniform_components = 4096,
++    .max_fragment_uniform_vectors = 1024,
++    .max_program_texel_offset = 7,
++    .max_renderbuffer_size = 16384,
++    .max_samples = 8,
++    .max_server_wait_timeout = 0,
++    .max_texture_image_units = 16,
++    .max_texture_lod_bias = 2,
++    .max_texture_size = 16384,
++    .max_transform_feedback_interleaved_components = 120,
++    .max_transform_feedback_separate_attribs = 4,
++    .max_transform_feedback_separate_components = 4,
++    .max_uniform_block_size = 65536,
++    .max_uniform_buffer_bindings = 24,
++    .max_varying_components = 120,
++    .max_varying_vectors = 30,
++    .max_vertex_attribs = 16,
++    .max_vertex_output_components = 120,
++    .max_vertex_texture_image_units = 16,
++    .max_vertex_uniform_blocks = 12,
++    .max_vertex_uniform_components = 16380,
++    .max_vertex_uniform_vectors = 4095,
++    .max_viewport_dims = {32767, 32767},
++    .stencil_back_value_mask = 4294967295,
++    .stencil_back_writemask = 4294967295,
++    .stencil_value_mask = 4294967295,
++    .stencil_writemask = 4294967295,
++    .subpixel_bits = 4,
++  },
++  .float_params = {
++    .max_texture_max_anisotropy_ext = 16.0f,
++    .fragment_shader_high_float_precision = 23,
++    .fragment_shader_high_float_range_max = 127,
++    .fragment_shader_high_float_range_min = 127,
++    .fragment_shader_high_int_precision = 0,
++    .fragment_shader_high_int_range_max = 30,
++    .fragment_shader_high_int_range_min = 31,
++    .fragment_shader_low_float_precision = 23,
++    .fragment_shader_low_float_range_max = 127,
++    .fragment_shader_low_float_range_min = 127,
++    .fragment_shader_medium_float_precision = 23,
++    .fragment_shader_medium_float_range_max = 127,
++    .fragment_shader_medium_float_range_min = 127,
++    .vertex_shader_high_float_precision = 23,
++    .vertex_shader_high_float_range_max = 127,
++    .vertex_shader_high_float_range_min = 127,
++    .vertex_shader_high_int_precision = 0,
++    .vertex_shader_high_int_range_max = 30,
++    .vertex_shader_high_int_range_min = 31,
++    .vertex_shader_low_float_precision = 23,
++    .vertex_shader_low_float_range_max = 127,
++    .vertex_shader_low_float_range_min = 127,
++    .vertex_shader_medium_float_precision = 23,
++    .vertex_shader_medium_float_range_max = 127,
++    .vertex_shader_medium_float_range_min = 127,
++  },
++};
++
++// NVIDIA GeForce GTX 1650 Ti параметры
++constexpr WebGLGPUParams kWebGLGTX1650TiParams = {
++  .unmasked_vendor = "Google Inc. (NVIDIA)",
++  .unmasked_renderer = "ANGLE (NVIDIA, NVIDIA GeForce GTX 1650 Ti Direct3D11 vs_5_0 ps_5_0, D3D11)",
++  .vendor = "WebKit",
++  .renderer = "WebKit WebGL",
++  .version = "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
++  .shading_language_version = "WebGL GLSL ES 3.00 (OpenGL ES GLSL ES 3.0 Chromium)",
++  .int_params = {
++    .aliased_line_width_range = {1, 1},
++    .aliased_point_size_range = {1, 1024},
++    .max_3d_texture_size = 2048,
++    .max_array_texture_layers = 2048,
++    .max_client_wait_timeout_webgl = 0,
++    .max_color_attachments = 8,
++    .max_combined_fragment_uniform_components = 200704,
++    .max_combined_texture_image_units = 32,
++    .max_combined_uniform_blocks = 24,
++    .max_combined_vertex_uniform_components = 212988,
++    .max_cube_map_texture_size = 16384,
++    .max_draw_buffers = 8,
++    .max_draw_buffers_webgl = 8,
++    .max_elements_indices = 2147483647,
++    .max_elements_vertices = 2147483647,
++    .max_element_index = 4294967294,
++    .max_fragment_input_components = 120,
++    .max_fragment_uniform_blocks = 12,
++    .max_fragment_uniform_components = 4096,
++    .max_fragment_uniform_vectors = 1024,
++    .max_program_texel_offset = 7,
++    .max_renderbuffer_size = 16384,
++    .max_samples = 8,
++    .max_server_wait_timeout = 0,
++    .max_texture_image_units = 16,
++    .max_texture_lod_bias = 2,
++    .max_texture_size = 16384,
++    .max_transform_feedback_interleaved_components = 120,
++    .max_transform_feedback_separate_attribs = 4,
++    .max_transform_feedback_separate_components = 4,
++    .max_uniform_block_size = 65536,
++    .max_uniform_buffer_bindings = 24,
++    .max_varying_components = 120,
++    .max_varying_vectors = 30,
++    .max_vertex_attribs = 16,
++    .max_vertex_output_components = 120,
++    .max_vertex_texture_image_units = 16,
++    .max_vertex_uniform_blocks = 12,
++    .max_vertex_uniform_components = 16380,
++    .max_vertex_uniform_vectors = 4095,
++    .max_viewport_dims = {32767, 32767},
++    .stencil_back_value_mask = 4294967295,
++    .stencil_back_writemask = 4294967295,
++    .stencil_value_mask = 4294967295,
++    .stencil_writemask = 4294967295,
++    .subpixel_bits = 4,
++  },
++  .float_params = {
++    .max_texture_max_anisotropy_ext = 16.0f,
++    .fragment_shader_high_float_precision = 23,
++    .fragment_shader_high_float_range_max = 127,
++    .fragment_shader_high_float_range_min = 127,
++    .fragment_shader_high_int_precision = 0,
++    .fragment_shader_high_int_range_max = 30,
++    .fragment_shader_high_int_range_min = 31,
++    .fragment_shader_low_float_precision = 23,
++    .fragment_shader_low_float_range_max = 127,
++    .fragment_shader_low_float_range_min = 127,
++    .fragment_shader_medium_float_precision = 23,
++    .fragment_shader_medium_float_range_max = 127,
++    .fragment_shader_medium_float_range_min = 127,
++    .vertex_shader_high_float_precision = 23,
++    .vertex_shader_high_float_range_max = 127,
++    .vertex_shader_high_float_range_min = 127,
++    .vertex_shader_high_int_precision = 0,
++    .vertex_shader_high_int_range_max = 30,
++    .vertex_shader_high_int_range_min = 31,
++    .vertex_shader_low_float_precision = 23,
++    .vertex_shader_low_float_range_max = 127,
++    .vertex_shader_low_float_range_min = 127,
++    .vertex_shader_medium_float_precision = 23,
++    .vertex_shader_medium_float_range_max = 127,
++    .vertex_shader_medium_float_range_min = 127,
++  },
++};
++
++// NVIDIA GeForce RTX 4070 параметры
++constexpr WebGLGPUParams kWebGLRTX4070Params = {
++  .unmasked_vendor = "Google Inc. (NVIDIA)",
++  .unmasked_renderer = "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 Direct3D11 vs_5_0 ps_5_0, D3D11)",
++  .vendor = "WebKit",
++  .renderer = "WebKit WebGL",
++  .version = "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
++  .shading_language_version = "WebGL GLSL ES 3.00 (OpenGL ES GLSL ES 3.0 Chromium)",
++  .int_params = {
++    .aliased_line_width_range = {1, 1},
++    .aliased_point_size_range = {1, 1024},
++    .max_3d_texture_size = 2048,
++    .max_array_texture_layers = 2048,
++    .max_client_wait_timeout_webgl = 0,
++    .max_color_attachments = 8,
++    .max_combined_fragment_uniform_components = 200704,
++    .max_combined_texture_image_units = 32,
++    .max_combined_uniform_blocks = 24,
++    .max_combined_vertex_uniform_components = 212988,
++    .max_cube_map_texture_size = 16384,
++    .max_draw_buffers = 8,
++    .max_draw_buffers_webgl = 8,
++    .max_elements_indices = 2147483647,
++    .max_elements_vertices = 2147483647,
++    .max_element_index = 4294967294,
++    .max_fragment_input_components = 120,
++    .max_fragment_uniform_blocks = 12,
++    .max_fragment_uniform_components = 4096,
++    .max_fragment_uniform_vectors = 1024,
++    .max_program_texel_offset = 7,
++    .max_renderbuffer_size = 16384,
++    .max_samples = 8,
++    .max_server_wait_timeout = 0,
++    .max_texture_image_units = 16,
++    .max_texture_lod_bias = 2,
++    .max_texture_size = 16384,
++    .max_transform_feedback_interleaved_components = 120,
++    .max_transform_feedback_separate_attribs = 4,
++    .max_transform_feedback_separate_components = 4,
++    .max_uniform_block_size = 65536,
++    .max_uniform_buffer_bindings = 24,
++    .max_varying_components = 120,
++    .max_varying_vectors = 30,
++    .max_vertex_attribs = 16,
++    .max_vertex_output_components = 120,
++    .max_vertex_texture_image_units = 16,
++    .max_vertex_uniform_blocks = 12,
++    .max_vertex_uniform_components = 16380,
++    .max_vertex_uniform_vectors = 4095,
++    .max_viewport_dims = {32767, 32767},
++    .stencil_back_value_mask = 4294967295,
++    .stencil_back_writemask = 4294967295,
++    .stencil_value_mask = 4294967295,
++    .stencil_writemask = 4294967295,
++    .subpixel_bits = 4,
++  },
++  .float_params = {
++    .max_texture_max_anisotropy_ext = 16.0f,
++    .fragment_shader_high_float_precision = 23,
++    .fragment_shader_high_float_range_max = 127,
++    .fragment_shader_high_float_range_min = 127,
++    .fragment_shader_high_int_precision = 0,
++    .fragment_shader_high_int_range_max = 30,
++    .fragment_shader_high_int_range_min = 31,
++    .fragment_shader_low_float_precision = 23,
++    .fragment_shader_low_float_range_max = 127,
++    .fragment_shader_low_float_range_min = 127,
++    .fragment_shader_medium_float_precision = 23,
++    .fragment_shader_medium_float_range_max = 127,
++    .fragment_shader_medium_float_range_min = 127,
++    .vertex_shader_high_float_precision = 23,
++    .vertex_shader_high_float_range_max = 127,
++    .vertex_shader_high_float_range_min = 127,
++    .vertex_shader_high_int_precision = 0,
++    .vertex_shader_high_int_range_max = 30,
++    .vertex_shader_high_int_range_min = 31,
++    .vertex_shader_low_float_precision = 23,
++    .vertex_shader_low_float_range_max = 127,
++    .vertex_shader_low_float_range_min = 127,
++    .vertex_shader_medium_float_precision = 23,
++    .vertex_shader_medium_float_range_max = 127,
++    .vertex_shader_medium_float_range_min = 127,
++  },
++};
++
++// NVIDIA GeForce GTX 1050 Ti параметры
++constexpr WebGLGPUParams kWebGLGTX1050TiParams = {
++  .unmasked_vendor = "Google Inc. (NVIDIA)",
++  .unmasked_renderer = "ANGLE (NVIDIA, NVIDIA GeForce GTX 1050 Ti Direct3D11 vs_5_0 ps_5_0, D3D11)",
++  .vendor = "WebKit",
++  .renderer = "WebKit WebGL",
++  .version = "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
++  .shading_language_version = "WebGL GLSL ES 3.00 (OpenGL ES GLSL ES 3.0 Chromium)",
++  .int_params = {
++    .aliased_line_width_range = {1, 1},
++    .aliased_point_size_range = {1, 1024},
++    .max_3d_texture_size = 2048,
++    .max_array_texture_layers = 2048,
++    .max_client_wait_timeout_webgl = 0,
++    .max_color_attachments = 8,
++    .max_combined_fragment_uniform_components = 200704,
++    .max_combined_texture_image_units = 32,
++    .max_combined_uniform_blocks = 24,
++    .max_combined_vertex_uniform_components = 212988,
++    .max_cube_map_texture_size = 16384,
++    .max_draw_buffers = 8,
++    .max_draw_buffers_webgl = 8,
++    .max_elements_indices = 2147483647,
++    .max_elements_vertices = 2147483647,
++    .max_element_index = 4294967294,
++    .max_fragment_input_components = 120,
++    .max_fragment_uniform_blocks = 12,
++    .max_fragment_uniform_components = 4096,
++    .max_fragment_uniform_vectors = 1024,
++    .max_program_texel_offset = 7,
++    .max_renderbuffer_size = 16384,
++    .max_samples = 8,
++    .max_server_wait_timeout = 0,
++    .max_texture_image_units = 16,
++    .max_texture_lod_bias = 2,
++    .max_texture_size = 16384,
++    .max_transform_feedback_interleaved_components = 120,
++    .max_transform_feedback_separate_attribs = 4,
++    .max_transform_feedback_separate_components = 4,
++    .max_uniform_block_size = 65536,
++    .max_uniform_buffer_bindings = 24,
++    .max_varying_components = 120,
++    .max_varying_vectors = 30,
++    .max_vertex_attribs = 16,
++    .max_vertex_output_components = 120,
++    .max_vertex_texture_image_units = 16,
++    .max_vertex_uniform_blocks = 12,
++    .max_vertex_uniform_components = 16380,
++    .max_vertex_uniform_vectors = 4095,
++    .max_viewport_dims = {32767, 32767},
++    .stencil_back_value_mask = 4294967295,
++    .stencil_back_writemask = 4294967295,
++    .stencil_value_mask = 4294967295,
++    .stencil_writemask = 4294967295,
++    .subpixel_bits = 4,
++  },
++  .float_params = {
++    .max_texture_max_anisotropy_ext = 16.0f,
++    .fragment_shader_high_float_precision = 23,
++    .fragment_shader_high_float_range_max = 127,
++    .fragment_shader_high_float_range_min = 127,
++    .fragment_shader_high_int_precision = 0,
++    .fragment_shader_high_int_range_max = 30,
++    .fragment_shader_high_int_range_min = 31,
++    .fragment_shader_low_float_precision = 23,
++    .fragment_shader_low_float_range_max = 127,
++    .fragment_shader_low_float_range_min = 127,
++    .fragment_shader_medium_float_precision = 23,
++    .fragment_shader_medium_float_range_max = 127,
++    .fragment_shader_medium_float_range_min = 127,
++    .vertex_shader_high_float_precision = 23,
++    .vertex_shader_high_float_range_max = 127,
++    .vertex_shader_high_float_range_min = 127,
++    .vertex_shader_high_int_precision = 0,
++    .vertex_shader_high_int_range_max = 30,
++    .vertex_shader_high_int_range_min = 31,
++    .vertex_shader_low_float_precision = 23,
++    .vertex_shader_low_float_range_max = 127,
++    .vertex_shader_low_float_range_min = 127,
++    .vertex_shader_medium_float_precision = 23,
++    .vertex_shader_medium_float_range_max = 127,
++    .vertex_shader_medium_float_range_min = 127,
++  },
++};
++
++}  // namespace blink
++
++#endif  // THIRD_PARTY_BLINK_RENDERER_CORE_FRAME_WEBGL_GPU_PARAMS_H_
